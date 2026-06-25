@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Máquina de los Vales de Amor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #fff5f6;
+            background-image: radial-gradient(#ffdfe4 1.5px, transparent 1.5px), radial-gradient(#ffdfe4 1.5px, #fff5f6 1.5px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+        .fancy-title {
+            font-family: 'Pacifico', cursive;
+        }
+        /* Animaciones personalizadas */
+        @keyframes rattle {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-4px, 4px) rotate(-8deg); }
+            40% { transform: translate(4px, -3px) rotate(6deg); }
+            60% { transform: translate(-3px, -2px) rotate(-5deg); }
+            80% { transform: translate(3px, 3px) rotate(4deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .rattling {
+            animation: rattle 0.8s ease-in-out infinite;
+        }
+        @keyframes spinCrank {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinning-crank {
+            animation: spinCrank 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+        @keyframes fallAndBounce {
+            0% { transform: translateY(-160px) scale(0.3) rotate(0deg); opacity: 0; }
+            40% { opacity: 1; }
+            70% { transform: translateY(0) scale(1.1) rotate(180deg); }
+            85% { transform: translateY(-15px) scale(0.95) rotate(240deg); }
+            100% { transform: translateY(0) scale(1) rotate(360deg); }
+        }
+        .dispensing-heart {
+            animation: fallAndBounce 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        /* Efecto de pulso tierno */
+        .pulse-heart {
+            animation: heartBeat 1.8s infinite;
+        }
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.12); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.12); }
+            70% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 pb-12">
+
+    <!-- Header -->
+    <header class="text-center my-6 max-w-lg px-4">
+        <h1 class="text-4xl md:text-5xl text-rose-600 fancy-title mb-2 drop-shadow-sm">La Máquina de los Vales</h1>
+        <p class="text-gray-600 text-sm md:text-base font-semibold">Gira la manivela para conseguir un corazón cargado de momentos especiales juntos ❤️</p>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start px-2">
+        
+        <!-- CONTROL PANEL (Izquierda) -->
+        <section class="lg:col-span-4 bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-xl border-2 border-rose-100 flex flex-col gap-6 order-2 lg:order-1">
+            <div>
+                <h2 class="text-xl font-bold text-rose-700 flex items-center gap-2 mb-1">
+                    ✍️ Añadir Vales Nuevos
+                </h2>
+                <p class="text-xs text-gray-500 mb-4">Crea vales personalizados para tu pareja que se mezclarán mágicamente dentro de la máquina.</p>
+                
+                <form id="coupon-form" onsubmit="addNewCoupon(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-rose-600 mb-1">Título del Vale</label>
+                        <input type="text" id="coupon-title" placeholder="Ej: Vale por un masaje de pies" required max="60"
+                               class="w-full px-4 py-2 text-sm rounded-xl border-2 border-rose-200 focus:border-rose-400 focus:outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-rose-600 mb-1">Descripción corta (opcional)</label>
+                        <textarea id="coupon-desc" placeholder="Ej: Válido por 30 min y música relajante." rows="2" max="120"
+                                  class="w-full px-4 py-2 text-sm rounded-xl border-2 border-rose-200 focus:border-rose-400 focus:outline-none transition-colors resize-none"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-2 rounded-xl text-sm transition-all shadow-md transform active:scale-95 flex items-center justify-center gap-2">
+                        <span>➕ Guardar en la Máquina</span>
+                    </button>
+                </form>
+            </div>
+
+            <hr class="border-rose-100" />
+
+            <div class="bg-rose-50 p-4 rounded-2xl border border-rose-100">
+                <h3 class="font-bold text-rose-800 text-sm mb-1">Estadísticas de la Ruleta:</h3>
+                <div class="grid grid-cols-2 gap-2 text-xs mt-2 text-gray-600">
+                    <div>Total de vales: <span id="stat-total" class="font-bold text-rose-600">0</span></div>
+                    <div>Por descubrir: <span id="stat-remaining" class="font-bold text-rose-600">0</span></div>
+                    <div>Conseguidos: <span id="stat-drawn" class="font-bold text-rose-600">0</span></div>
+                    <div>Canjeados: <span id="stat-redeemed" class="font-bold text-rose-600">0</span></div>
+                </div>
+                <button onclick="resetAllData()" class="mt-4 w-full text-center text-[10px] text-gray-400 hover:text-rose-500 underline transition-colors">
+                    Reiniciar máquina y vales por defecto
+                </button>
+            </div>
+        </section>
+
+        <!-- THE GUMBALL MACHINE (Centro) -->
+        <section class="lg:col-span-4 flex flex-col items-center order-1 lg:order-2">
+            
+            <div class="relative w-full max-w-[340px] aspect-[3/4] flex flex-col items-center">
+                
+                <!-- GUMBALL MACHINE CONTAINER -->
+                <div class="w-full relative h-[420px] select-none">
+                    
+                    <!-- SVG GUMBALL MACHINE -->
+                    <svg id="gumball-machine-svg" class="w-full h-full drop-shadow-xl" viewBox="0 0 300 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        
+                        <!-- Top Cap (Tapa de arriba) -->
+                        <path id="svg-cap" d="M100 45 C100 35, 200 35, 200 45 L210 55 L90 55 Z" fill="#E11D48" />
+                        <circle id="svg-cap-knob" cx="150" cy="30" r="10" fill="#E11D48" />
+                        
+                        <!-- Glass Globe (Esfera de Cristal) -->
+                        <!-- Clip path for hearts inside -->
+                        <defs>
+                            <clipPath id="globe-clip">
+                                <circle cx="150" cy="135" r="76" />
+                            </clipPath>
+                        </defs>
+                        
+                        <!-- Glass background -->
+                        <circle cx="150" cy="135" r="80" fill="#E0F2FE" stroke="#BAE6FD" stroke-width="4" />
+                        <circle cx="150" cy="135" r="76" fill="#F0F9FF" />
+
+                        <!-- Hearts Group inside Globe -->
+                        <g id="globe-hearts" clip-path="url(#globe-clip)">
+                            <!-- Dynamic hearts will be drawn here by JS -->
+                        </g>
+
+                        <!-- Glass Reflection/Shine overlay -->
+                        <path d="M85 90 C100 70, 130 65, 150 65 C130 75, 100 85, 85 110 Z" fill="white" opacity="0.5" />
+                        <path d="M210 170 C200 190, 180 200, 160 205 C180 195, 200 180, 210 160 Z" fill="white" opacity="0.3" />
+                        
+                        <!-- Machine Neck (Unión cristal-base) -->
+                        <rect x="100" y="210" width="100" height="12" fill="#BE123C" rx="3" id="svg-neck" />
+
+                        <!-- Red Base (Cuerpo inferior) -->
+                        <path id="svg-base-body" d="M100 215 L80 370 L220 370 L200 215 Z" fill="#E11D48" />
+                        <!-- Bottom Lip (Borde inferior) -->
+                        <rect id="svg-base-lip" x="70" y="365" width="160" height="15" rx="4" fill="#BE123C" />
+
+                        <!-- Metal Crank Area (Área gris de la manivela) -->
+                        <rect x="115" y="235" width="70" height="65" rx="8" fill="#D1D5DB" stroke="#9CA3AF" stroke-width="2" />
+                        
+                        <!-- Rotating Crank Handle (Manivela Giratoria) -->
+                        <g id="crank-group" class="cursor-pointer" onclick="spinMechanism()">
+                            <circle cx="150" cy="265" r="18" fill="#9CA3AF" stroke="#6B7280" stroke-width="2" />
+                            <rect x="120" y="261" width="60" height="8" rx="4" fill="#6B7280" />
+                            <circle cx="150" cy="265" r="8" fill="#4B5563" />
+                            <circle cx="130" cy="265" r="6" fill="#374151" />
+                            <circle cx="170" cy="265" r="6" fill="#374151" />
+                        </g>
+
+                        <!-- Dispenser Chute (Boca de salida del caramelo) -->
+                        <path d="M125 315 L175 315 L180 355 L120 355 Z" fill="#9F1239" id="svg-chute-bg" />
+                        <path d="M125 315 L175 315 L170 345 L130 345 Z" fill="#4C0519" />
+                        <!-- Flap door -->
+                        <rect x="132" y="315" width="36" height="25" rx="3" fill="#BE123C" id="svg-flap" />
+                    </svg>
+
+                    <!-- Real Dispensed Heart Chute Output Overlay -->
+                    <div id="dispensed-heart-container" class="absolute left-[134px] top-[324px] w-8 h-8 hidden z-10">
+                        <button onclick="revealDispensedCoupon()" class="w-full h-full focus:outline-none pulse-heart" title="¡Haz clic para abrir tu vale!">
+                            <svg viewBox="0 0 32 32" class="w-full h-full drop-shadow-md">
+                                <path d="M12 5 C8.13 5 5 8.13 5 12 C5 18.6 12.54 24.34 16 27 C19.46 24.34 27 18.6 27 12 C27 8.13 23.87 5 20 5 C17.34 5 15.08 6.49 14 8.68 C12.92 6.49 10.66 5 8 5 Z" fill="#FF1493" stroke="#FFF" stroke-width="1.5" />
+                            </svg>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Action Button under machine -->
+                <button id="btn-spin" onclick="spinMechanism()"
+                        class="mt-4 px-8 py-3 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transform active:scale-95 transition-all text-sm tracking-wider uppercase">
+                    ¡Girar Manivela! 🍬
+                </button>
+            </div>
+
+        </section>
+
+        <!-- COUPON ARCHIVE / ALBUM (Derecha) -->
+        <section class="lg:col-span-4 flex flex-col gap-4 order-3">
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-xl border-2 border-rose-100 flex flex-col h-[520px]">
+                <div class="flex items-center justify-between mb-4 border-b border-rose-100 pb-3">
+                    <h2 class="text-xl font-bold text-rose-700 flex items-center gap-2">
+                        🎟️ Colección de Vales
+                    </h2>
+                    <span id="badge-collection" class="bg-rose-100 text-rose-700 text-xs font-extrabold px-2.5 py-1 rounded-full">0/8</span>
+                </div>
+
+                <!-- List of coupons -->
+                <div id="coupons-locker-list" class="flex-1 overflow-y-auto space-y-3 pr-1">
+                    <!-- Dynamic Items will be injected here -->
+                    <div class="text-center text-gray-400 py-12 flex flex-col items-center justify-center gap-3">
+                        <svg class="w-12 h-12 text-rose-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        </svg>
+                        <p class="text-sm font-medium">Aún no has conseguido vales.<br>¡Haz girar la máquina!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="mt-12 text-center text-xs text-rose-400 font-semibold">
+        Hecho con ❤️ para un amor de película • 2026
+    </footer>
+
+    <!-- MODAL: REVEAL COUPON -->
+    <div id="reveal-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-rose-50 to-white max-w-sm w-full rounded-3xl p-6 border-4 border-rose-300 shadow-2xl relative text-center transform scale-90 opacity-0 transition-all duration-300" id="reveal-modal-card">
+            
+            <!-- Confetti trigger anchor -->
+            <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-white rounded-full p-3 border-4 border-rose-300 shadow-lg">
+                <span class="text-4xl">🎁</span>
+            </div>
+
+            <div class="mt-6 mb-4">
+                <span class="text-xs font-bold text-rose-500 uppercase tracking-widest bg-rose-100 px-3 py-1 rounded-full">¡Nuevo Vale Conseguido!</span>
+            </div>
+
+            <h3 id="modal-coupon-title" class="text-2xl font-black text-rose-700 leading-tight mb-2">Título de Ejemplo</h3>
+            <p id="modal-coupon-desc" class="text-sm text-gray-600 mb-6 px-2">Esta es la descripción del vale que acabas de recibir de tu pareja.</p>
+
+            <div class="bg-rose-50 border-2 border-dashed border-rose-300 rounded-2xl p-4 mb-6 relative overflow-hidden">
+                <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-rose-200 rounded-full"></div>
+                <div class="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-rose-200 rounded-full"></div>
+                <p class="text-xs font-mono text-rose-500 font-bold uppercase">CÓDIGO DE AMOR: VALE-<span id="modal-coupon-code">1234</span></p>
+            </div>
+
+            <button onclick="closeRevealModal()" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-colors shadow-md">
+                Guardar en mi colección
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: REDEEM CONFIRMATION -->
+    <div id="redeem-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white max-w-sm w-full rounded-3xl p-6 border-2 border-gray-100 shadow-2xl text-center transform scale-90 opacity-0 transition-all duration-300" id="redeem-modal-card">
+            
+            <span class="text-5xl block mb-3">🔔</span>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">¿Seguro que quieres canjearlo?</h3>
+            <p class="text-sm text-gray-500 mb-6">Muestra esta pantalla a tu pareja en la vida real antes de presionar el botón. ¡Una vez canjeado, no hay vuelta atrás! 😉</p>
+
+            <div class="bg-yellow-50 text-yellow-800 p-3 rounded-xl text-xs font-semibold border border-yellow-200 mb-6">
+                ⚠️ Al confirmar, el cupón pasará a estado "USADO".
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeRedeemModal()" class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors">
+                    Cancelar
+                </button>
+                <button id="btn-confirm-redeem" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm transition-colors shadow-md">
+                    ¡Sí, canjear!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO SYNTHESIS & APP ENGINE -->
+    <script>
+        // --- BASE DE DATOS DE VALES INICIALES ---
+        const DEFAULT_COUPONS = [
+            { id: "1", title: "Cena romántica hecha con amor", desc: "Tú eliges el menú y yo me encargo de cocinar y lavar todos los platos.", drawn: false, redeemed: false },
+            { id: "2", title: "Elegir película hoy (sin quejas)", desc: "Puedes poner la película que quieras por muy larga o cursi que sea, prometo verla entera con una sonrisa.", drawn: false, redeemed: false },
+            { id: "3", title: "Masaje relajante de 30 minutos", desc: "Incluye música suave, aceites y cero prisas.", drawn: false, redeemed: false },
+            { id: "4", title: "Un desayuno sorpresa en la cama", desc: "Despiértate tarde que hoy yo me encargo de llevarte el café y tus mimos favoritos.", drawn: false, redeemed: false },
+            { id: "5", title: "Día de relax total y mimos ilimitados", desc: "Día entero libre de responsabilidades, tareas del hogar y lleno de mimos.", drawn: false, redeemed: false },
+            { id: "6", title: "Una tarde de videojuegos o tu hobby favorito", desc: "Te acompaño a jugar o te dejo tiempo libre ilimitado para disfrutar tu hobby.", drawn: false, redeemed: false },
+            { id: "7", title: "Una escapada de fin de semana", desc: "Planearemos un viaje exprés o paseo para desconectar juntos.", drawn: false, redeemed: false },
+            { id: "8", title: "Un 'Sí a todo' durante 3 horas", desc: "Cualquier petición razonable que hagas durante este tiempo tendrá un rotundo sí por mi parte.", drawn: false, redeemed: false }
+        ];
+
+        let coupons = [];
+        let currentlyDispensedId = null;
+
+        // Web Audio API para sintetizar sonidos retro tiernos sin cargar archivos de internet
+        let audioCtx = null;
+        function playTone(freq, type, duration, delay = 0) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                setTimeout(() => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + duration);
+                }, delay * 1000);
+            } catch(e) { /* Audio no soportado o bloqueado */ }
+        }
+
+        function playSpinSound() {
+            // Sonido de giro de manivela (mecanismo)
+            playTone(150, 'sawtooth', 0.1, 0);
+            playTone(180, 'sawtooth', 0.1, 0.15);
+            playTone(210, 'sawtooth', 0.1, 0.3);
+            playTone(240, 'sawtooth', 0.15, 0.45);
+        }
+
+        function playPopSound() {
+            // Caída de bola / burbuja
+            playTone(300, 'sine', 0.15, 0);
+            playTone(600, 'sine', 0.25, 0.08);
+        }
+
+        function playMagicChime() {
+            // Fanfarria al abrir cupón
+            playTone(523.25, 'sine', 0.2, 0);     // C5
+            playTone(659.25, 'sine', 0.2, 0.1);   // E5
+            playTone(783.99, 'sine', 0.2, 0.2);   // G5
+            playTone(1046.50, 'sine', 0.4, 0.3);  // C6
+        }
+
+        // --- INICIALIZAR APLICACIÓN ---
+        window.onload = function() {
+            loadData();
+            renderMachineHearts();
+            renderCouponsLocker();
+            updateStats();
+        };
+
+        function loadData() {
+            const savedCoupons = localStorage.getItem('love_coupons_data');
+            
+            if (savedCoupons) {
+                coupons = JSON.parse(savedCoupons);
+            } else {
+                coupons = [...DEFAULT_COUPONS];
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('love_coupons_data', JSON.stringify(coupons));
+        }
+
+        // --- RENDERIZAR CORAZONES DENTRO DEL CRISTAL (Aumentado considerablemente) ---
+        function renderMachineHearts() {
+            const heartsGroup = document.getElementById('globe-hearts');
+            heartsGroup.innerHTML = '';
+
+            // Solo mostrar corazones para vales que NO han sido sacados aún (drawn = false)
+            const remainingCoupons = coupons.filter(c => !c.drawn);
+            
+            // Cantidad base + una cantidad estética extra alta para simular que está súper llena
+            const baseCount = remainingCoupons.length; 
+            const extraCount = 24; // Añadidos 24 corazones estéticos extra para dar volumen real como la imagen
+            const count = baseCount + extraCount;
+            
+            // Colores románticos variados basados en tu paleta rosa, fucsia y rojo
+            const colors = ['#FF1493', '#FF69B4', '#FFB6C1', '#FF6347', '#FF4500', '#F43F5E', '#EC4899', '#E11D48'];
+            
+            for (let i = 0; i < count; i++) {
+                const color = colors[i % colors.length];
+                
+                // Distribución gravitacional para que se asienten de forma natural en la mitad inferior de la esfera
+                const angle = Math.random() * Math.PI; 
+                const r = Math.random() * 66; // Máximo radio dentro del globo
+                const x = 150 + r * Math.cos(angle);
+                const y = 135 + r * Math.sin(angle) * 0.85 + 18; // Cargado sutilmente hacia abajo
+
+                const scale = 0.5 + Math.random() * 0.45; // Tamaños variados y realistas
+                const rotation = -50 + Math.random() * 100; // Ángulo de inclinación simpático
+
+                // Path de un corazón SVG tierno
+                const heartPath = `
+                    <path d="M12 5 C8.13 5 5 8.13 5 12 C5 18.6 12.54 24.34 16 27 C19.46 24.34 27 18.6 27 12 C27 8.13 23.87 5 20 5 C17.34 5 15.08 6.49 14 8.68 C12.92 6.49 10.66 5 8 5 Z" 
+                          fill="${color}" 
+                          opacity="0.95" 
+                          transform="translate(${x - 16}, ${y - 16}) scale(${scale}) rotate(${rotation}, 16, 16)" />
+                `;
+                heartsGroup.innerHTML += heartPath;
+            }
+        }
+
+        // --- SISTEMA GIRATORIO Y ANIMACIÓN ---
+        let isSpinning = false;
+
+        function spinMechanism() {
+            if (isSpinning) return;
+            
+            // Si ya hay un corazón en la bandeja esperando a ser abierto
+            if (currentlyDispensedId) {
+                showToast("¡Primero abre el corazón que ha caído en la bandeja!");
+                return;
+            }
+
+            // Filtrar disponibles
+            const available = coupons.filter(c => !c.drawn);
+            if (available.length === 0) {
+                showToast("¡No quedan más corazones! Añade nuevos vales o reinicia la máquina.");
+                return;
+            }
+
+            isSpinning = true;
+            document.getElementById('btn-spin').disabled = true;
+
+            // 1. Sonido de manivela
+            playSpinSound();
+
+            // 2. Animar Manivela
+            const crank = document.getElementById('crank-group');
+            crank.classList.add('spinning-crank');
+
+            // 3. Animar Corazones vibrando dentro del cristal
+            const svgMachine = document.getElementById('gumball-machine-svg');
+            svgMachine.classList.add('rattling');
+
+            // Elegir vale ganador con anticipación
+            const randomIndex = Math.floor(Math.random() * available.length);
+            const chosenCoupon = available[randomIndex];
+
+            // 4. Detener vibración y dispensar corazón
+            setTimeout(() => {
+                crank.classList.remove('spinning-crank');
+                svgMachine.classList.remove('rattling');
+                
+                // Marcar como sacado
+                chosenCoupon.drawn = true;
+                saveToLocalStorage();
+
+                // Animar caída de corazón
+                const dispensedContainer = document.getElementById('dispensed-heart-container');
+                dispensedContainer.classList.remove('hidden');
+                dispensedContainer.classList.add('dispensing-heart');
+
+                currentlyDispensedId = chosenCoupon.id;
+
+                // Sonido de caída
+                setTimeout(() => {
+                    playPopSound();
+                }, 400);
+
+                // Re-render del interior sin el corazón ganador
+                renderMachineHearts();
+                updateStats();
+
+                isSpinning = false;
+                document.getElementById('btn-spin').disabled = false;
+            }, 1200);
+        }
+
+        // --- REVELAR VALE DISPENSADO ---
+        function revealDispensedCoupon() {
+            if (!currentlyDispensedId) return;
+
+            const coupon = coupons.find(c => c.id === currentlyDispensedId);
+            if (!coupon) return;
+
+            // Configurar modal
+            document.getElementById('modal-coupon-title').innerText = coupon.title;
+            document.getElementById('modal-coupon-desc').innerText = coupon.desc || "Sin descripción adicional. ¡Listo para disfrutar!";
+            document.getElementById('modal-coupon-code').innerText = coupon.id.padStart(4, '0');
+
+            // Animación de aparición
+            const modal = document.getElementById('reveal-modal');
+            const card = document.getElementById('reveal-modal-card');
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-90', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 50);
+
+            // Confeti de celebración
+            confetti({
+                particleCount: 120,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#FF1493', '#FF69B4', '#FFB6C1', '#F43F5E']
+            });
+
+            playMagicChime();
+
+            // Ocultar corazón dispensado de la bandeja
+            const dispensedContainer = document.getElementById('dispensed-heart-container');
+            dispensedContainer.classList.add('hidden');
+            dispensedContainer.classList.remove('dispensing-heart');
+            
+            currentlyDispensedId = null;
+        }
+
+        function closeRevealModal() {
+            const modal = document.getElementById('reveal-modal');
+            const card = document.getElementById('reveal-modal-card');
+            
+            card.classList.add('scale-90', 'opacity-0');
+            card.classList.remove('scale-100', 'opacity-100');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                renderCouponsLocker();
+                updateStats();
+            }, 200);
+        }
+
+        // --- GESTIÓN DE VALES (NUEVOS & RENDER) ---
+        function addNewCoupon(e) {
+            e.preventDefault();
+            const titleInput = document.getElementById('coupon-title');
+            const descInput = document.getElementById('coupon-desc');
+
+            const newCoupon = {
+                id: Date.now().toString(),
+                title: titleInput.value.trim(),
+                desc: descInput.value.trim(),
+                drawn: false,
+                redeemed: false
+            };
+
+            coupons.push(newCoupon);
+            saveToLocalStorage();
+            
+            // Efecto feliz
+            playTone(523.25, 'sine', 0.1, 0);
+            playTone(659.25, 'sine', 0.15, 0.08);
+
+            // Limpiar formulario y refrescar
+            titleInput.value = '';
+            descInput.value = '';
+            
+            renderMachineHearts();
+            updateStats();
+            showToast("❤️ ¡Cupón guardado con éxito dentro de la máquina!");
+        }
+
+        function renderCouponsLocker() {
+            const listContainer = document.getElementById('coupons-locker-list');
+            listContainer.innerHTML = '';
+
+            const drawnCoupons = coupons.filter(c => c.drawn);
+            
+            // Actualizar contador visual
+            document.getElementById('badge-collection').innerText = `${drawnCoupons.length}/${coupons.length}`;
+
+            if (drawnCoupons.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center text-gray-400 py-16 flex flex-col items-center justify-center gap-3">
+                        <svg class="w-12 h-12 text-rose-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        </svg>
+                        <p class="text-sm font-semibold text-gray-500">Aún no has descubierto vales.</p>
+                        <p class="text-xs text-gray-400">¡Gira la manivela de la máquina arriba para jugar!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Renderizar de más nuevo a más viejo
+            drawnCoupons.slice().reverse().forEach(coupon => {
+                const card = document.createElement('div');
+                card.className = `relative p-4 rounded-2xl border-2 transition-all ${
+                    coupon.redeemed 
+                        ? 'bg-gray-50/70 border-gray-200 text-gray-400 select-none' 
+                        : 'bg-white border-rose-100 hover:border-rose-200 shadow-sm hover:shadow-md'
+                }`;
+
+                let buttonHTML = '';
+                if (!coupon.redeemed) {
+                    buttonHTML = `
+                        <button onclick="promptRedeem('${coupon.id}')" 
+                                class="mt-3 w-full bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-colors shadow-sm">
+                            Canjear Vale
+                        </button>
+                    `;
+                } else {
+                    buttonHTML = `
+                        <div class="absolute -rotate-12 right-2 top-2 border-4 border-rose-500 text-rose-500 font-extrabold text-xs px-2 py-0.5 rounded tracking-widest uppercase">
+                            ¡USADO!
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="pr-16">
+                        <h4 class="font-bold text-sm ${coupon.redeemed ? 'text-gray-400 line-through' : 'text-rose-800'}">${coupon.title}</h4>
+                        <p class="text-xs mt-1 leading-relaxed ${coupon.redeemed ? 'text-gray-400' : 'text-gray-500'}">${coupon.desc || "Válido para canjear en cualquier momento."}</p>
+                    </div>
+                    ${buttonHTML}
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        // --- SISTEMA DE CANJEO CON CONFIRMACIÓN ---
+        let couponIdToRedeem = null;
+
+        function promptRedeem(id) {
+            couponIdToRedeem = id;
+            const modal = document.getElementById('redeem-modal');
+            const card = document.getElementById('redeem-modal-card');
+
+            // Configurar acción del botón de confirmación
+            document.getElementById('btn-confirm-redeem').onclick = executeRedeem;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-90', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 50);
+
+            playTone(350, 'sine', 0.15);
+        }
+
+        function closeRedeemModal() {
+            const modal = document.getElementById('redeem-modal');
+            const card = document.getElementById('redeem-modal-card');
+            
+            card.classList.add('scale-90', 'opacity-0');
+            card.classList.remove('scale-100', 'opacity-100');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                couponIdToRedeem = null;
+            }, 200);
+        }
+
+        function executeRedeem() {
+            if (!couponIdToRedeem) return;
+
+            const coupon = coupons.find(c => c.id === couponIdToRedeem);
+            if (coupon) {
+                coupon.redeemed = true;
+                saveToLocalStorage();
+                
+                // Sonido triste/retro de canjeado
+                playTone(400, 'square', 0.1, 0);
+                playTone(300, 'square', 0.2, 0.12);
+
+                closeRedeemModal();
+                renderCouponsLocker();
+                updateStats();
+                showToast("✅ Vale marcado como USADO correctamente.");
+            }
+        }
+
+        // --- ESTADÍSTICAS ---
+        function updateStats() {
+            const total = coupons.length;
+            const remaining = coupons.filter(c => !c.drawn).length;
+            const drawn = coupons.filter(c => c.drawn).length;
+            const redeemed = coupons.filter(c => c.redeemed).length;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-remaining').innerText = remaining;
+            document.getElementById('stat-drawn').innerText = drawn;
+            document.getElementById('stat-redeemed').innerText = redeemed;
+        }
+
+        function resetAllData() {
+            if (confirm("¿Estás seguro/a de que quieres vaciar la máquina y restaurar los cupones originales? Esto borrará tus cupones creados.")) {
+                localStorage.removeItem('love_coupons_data');
+                coupons = [...DEFAULT_COUPONS];
+                saveToLocalStorage();
+                currentlyDispensedId = null;
+                document.getElementById('dispensed-heart-container').classList.add('hidden');
+                loadData();
+                renderMachineHearts();
+                renderCouponsLocker();
+                updateStats();
+                playTone(200, 'sine', 0.3);
+                showToast("🔄 Máquina restaurada con éxito.");
+            }
+        }
+
+        // --- SISTEMA DE TOASTS PERSONALIZADO (Evita alerts molestos) ---
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm text-white px-5 py-3 rounded-2xl text-xs font-bold shadow-xl z-[99] transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-2 max-w-sm text-center";
+            toast.innerText = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
